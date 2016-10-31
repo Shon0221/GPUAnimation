@@ -38,8 +38,8 @@ view.animate {
   $0.center.target = CGPoint(x:100,y:200)
 }.delay(2.0).animate {
   $0.center.target = CGPoint(x:50,y:50)
-  $0.center.onChange = { newAlpha in
-    print(newAlpha)
+  $0.center.onChange = { newCenter in
+    print(newCenter)
   }
   $0.backgroundColor.target = UIColor.black
 }.then {
