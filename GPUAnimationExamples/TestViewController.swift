@@ -13,13 +13,12 @@ class TestViewController:UIViewController{
   @IBOutlet weak var square: UIView!
   override func viewDidLoad() {
     super.viewDidLoad()
+    test1()
   }
   func test1(){
     square.animate { to in
-      to.stiffness = 200
       to.bounds.target = CGRect(x: 0, y: 0, width: 300, height: 300)
       }.animate{ to in
-        to.stiffness = 300
         to.center.target = CGPoint(x:200, y:400)
       }.then {
         print("First stage done")
@@ -30,11 +29,9 @@ class TestViewController:UIViewController{
       }.then {
         print("Second stage done")
       }.animate{ to in
-        to.stiffness = 200
         to.bounds.target = CGRect(x: 0, y: 0, width: 300, height: 300)
         to.center.target = CGPoint(x:200, y:400)
       }.animate{ to in
-        to.damping = 40
         to.backgroundColor.target = UIColor.green
       }.then {
         print("test 1 finished!")
@@ -44,7 +41,6 @@ class TestViewController:UIViewController{
   
   func test2(){
     let animation = square.animate{
-      $0.stiffness = 20
       $0.bounds.target = CGRect(x: 0, y: 0, width: 50, height: 50)
       }.then{
         print("This line shouldn't be printed")
@@ -58,7 +54,6 @@ class TestViewController:UIViewController{
   
   func test3(){
     let animation = square.delay(2).animate{
-      $0.stiffness = 20
       $0.bounds.target = CGRect(x: 0, y: 0, width: 50, height: 500)
       }.then{ print("This line shouldn't be printed") }.execute()
     Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false){ timer in
@@ -69,10 +64,8 @@ class TestViewController:UIViewController{
   }
   
   lazy var storedAnimation:ViewAnimationBuilder = self.square.animate{
-    $0.stiffness = 20
     $0.bounds.target = CGRect(x: 0, y: 0, width: 50, height: 500)
     }.then().animate{
-      $0.stiffness = 20
       $0.bounds.target = CGRect(x: 0, y: 0, width: 50, height: 50)
     }.then{
       print("Stored animation finished")
@@ -85,10 +78,8 @@ class TestViewController:UIViewController{
   func testAlloc(){
     for _ in 0...10000{
       square.animate { to in
-        to.stiffness = 200
         to.bounds.target = CGRect(x: 0, y: 0, width: 300, height: 300)
         }.animate{ to in
-          to.stiffness = 300
           to.center.target = CGPoint(x:200, y:400)
       }
     }

@@ -58,73 +58,6 @@ kernel void springAnimate(
 
 
 struct UnitBezier {
-  float sampleCurveX(float t)
-  {
-    // `ax t^3 + bx t^2 + cx t' expanded using Horner's rule.
-    return ((ax * t + bx) * t + cx) * t;
-  }
-  
-  float sampleCurveY(float t)
-  {
-    return ((ay * t + by) * t + cy) * t;
-  }
-  
-  float sampleCurveDerivativeX(float t)
-  {
-    return (3.0 * ax * t + 2.0 * bx) * t + cx;
-  }
-  
-  // Given an x value, find a parametric value it came from.
-  float solveCurveX(float x, float epsilon)
-  {
-    float t0;
-    float t1;
-    float t2;
-    float x2;
-    float d2;
-    int i;
-    
-    // First try a few iterations of Newton's method -- normally very fast.
-    for (t2 = x, i = 0; i < 8; i++) {
-      x2 = sampleCurveX(t2) - x;
-      if (fabs (x2) < epsilon)
-        return t2;
-      d2 = sampleCurveDerivativeX(t2);
-      if (fabs(d2) < 1e-6)
-        break;
-      t2 = t2 - x2 / d2;
-    }
-    
-    // Fall back to the bisection method for reliability.
-    t0 = 0.0;
-    t1 = 1.0;
-    t2 = x;
-    
-    if (t2 < t0)
-      return t0;
-    if (t2 > t1)
-      return t1;
-    
-    while (t0 < t1) {
-      x2 = sampleCurveX(t2);
-      if (fabs(x2 - x) < epsilon)
-        return t2;
-      if (x > x2)
-        t0 = t2;
-      else
-        t1 = t2;
-      t2 = (t1 - t0) * .5 + t0;
-    }
-    
-    // Failure.
-    return t2;
-  }
-  
-  float solve(float x, float epsilon)
-  {
-    return sampleCurveY(solveCurveX(x, epsilon));
-  }
-
   float ax;
   float bx;
   float cx;
@@ -133,6 +66,71 @@ struct UnitBezier {
   float by;
   float cy;
 };
+
+float sampleCurveX(device UnitBezier *b, float t){
+  // `ax t^3 + bx t^2 + cx t' expanded using Horner's rule.
+  return ((b->ax * t + b->bx) * t + b->cx) * t;
+}
+
+float sampleCurveY(device UnitBezier *b, float t)
+{
+  return ((b->ay * t + b->by) * t + b->cy) * t;
+}
+
+float sampleCurveDerivativeX(device UnitBezier *b, float t)
+{
+  return (3.0 * b->ax * t + 2.0 * b->bx) * t + b->cx;
+}
+
+// Given an x value, find a parametric value it came from.
+float solveCurveX(device UnitBezier *b, float x, float epsilon)
+{
+  float t0;
+  float t1;
+  float t2;
+  float x2;
+  float d2;
+  int i;
+  
+  // First try a few iterations of Newton's method -- normally very fast.
+  for (t2 = x, i = 0; i < 8; i++) {
+    x2 = sampleCurveX(b, t2) - x;
+    if (fabs (x2) < epsilon)
+      return t2;
+    d2 = sampleCurveDerivativeX(b, t2);
+    if (fabs(d2) < 1e-6)
+      break;
+    t2 = t2 - x2 / d2;
+  }
+  
+  // Fall back to the bisection method for reliability.
+  t0 = 0.0;
+  t1 = 1.0;
+  t2 = x;
+  
+  if (t2 < t0)
+    return t0;
+  if (t2 > t1)
+    return t1;
+  
+  while (t0 < t1) {
+    x2 = sampleCurveX(b, t2);
+    if (fabs(x2 - x) < epsilon)
+      return t2;
+    if (x > x2)
+      t0 = t2;
+    else
+      t1 = t2;
+    t2 = (t1 - t0) * .5 + t0;
+  }
+  
+  // Failure.
+  return t2;
+}
+
+float solve(device UnitBezier *b, float x, float epsilon){
+  return sampleCurveY(b, solveCurveX(b, x, epsilon));
+}
 
 struct TweenAnimationState {
   float4 current;
@@ -156,6 +154,7 @@ kernel void tweenAnimate(
   a->running = a->running && a->currentTime < a->duration;
 
   a->previous = a->current;
-  float y = ((UnitBezier)a->bezier).solve(a->currentTime / a->duration, 0.001 / a->duration);
+  float y = solve(&a->bezier, a->currentTime / a->duration, 0.001 / a->duration);
+//  float y = a->currentTime / a->duration;
   a->current = a->running ? y * a->target : a->target;
 }

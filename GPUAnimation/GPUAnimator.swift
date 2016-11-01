@@ -155,8 +155,7 @@ open class GPUSpringAnimator: NSObject {
   }
   private var propertyManager = AnimatingPropertyManager()
   
-  private var springWorker:GPUWorker!
-  private var tweenWorker:GPUWorker!
+  private var worker = GPUWorker()
   
   private var springAnimationBuffer = GPUBuffer<Int, GPUSpringAnimationState, GPUAnimationMetaData>()
   private var tweenAnimationBuffer = GPUBuffer<Int, GPUTweenAnimationState, GPUAnimationMetaData>()
@@ -170,18 +169,19 @@ open class GPUSpringAnimator: NSObject {
   private override init(){
     super.init()
     paramBuffer.content![0] = 0
-    springWorker = GPUWorker(functionName: "springAnimate", fallback:springFallback)
-    springWorker.addBuffer(buffer: springAnimationBuffer)
-    springWorker.addBuffer(buffer: paramBuffer)
-    springWorker.completionCallback = doneProcessing
+    let springJob = GPUJob(functionName: "springAnimate", fallback:springFallback)
+    springJob.addBuffer(buffer: springAnimationBuffer)
+    springJob.addBuffer(buffer: paramBuffer)
     
-    tweenWorker = GPUWorker(functionName: "tweenAnimate", fallback:tweenFallback)
-    tweenWorker.addBuffer(buffer: tweenAnimationBuffer)
-    tweenWorker.addBuffer(buffer: paramBuffer)
-    tweenWorker.completionCallback = doneProcessing
+    let tweenJob = GPUJob(functionName: "tweenAnimate", fallback:tweenFallback)
+    tweenJob.addBuffer(buffer: tweenAnimationBuffer)
+    tweenJob.addBuffer(buffer: paramBuffer)
+    
+    worker.jobs = [tweenJob, springJob]
+    worker.completionCallback = doneProcessing
   }
   
-  private func springFallback(worker:GPUWorker){
+  private func springFallback(job:GPUJob){
     let dt = paramBuffer.content![0]
     for (_, i) in springAnimationBuffer {
       let a = springAnimationBuffer.content!.baseAddress!.advanced(by: i)
@@ -214,7 +214,7 @@ open class GPUSpringAnimator: NSObject {
     }
   }
 
-  private func tweenFallback(worker:GPUWorker){
+  private func tweenFallback(job:GPUJob){
     let dt = paramBuffer.content![0]
     for (_, i) in tweenAnimationBuffer {
       let a = tweenAnimationBuffer.content!.baseAddress!.advanced(by: i)
@@ -224,7 +224,6 @@ open class GPUSpringAnimator: NSObject {
       a.pointee.previous = a.pointee.current
       if (a.pointee.running == 1) {
         let y = a.pointee.bezier.solve(x: a.pointee.currentTime / a.pointee.duration, eps: 0.001 / a.pointee.duration)
-        print(y, a.pointee.currentTime, dt)
         a.pointee.current = y * a.pointee.target
       } else {
         a.pointee.current = a.pointee.target
@@ -233,10 +232,6 @@ open class GPUSpringAnimator: NSObject {
   }
 
   private func doneProcessing(){
-    guard !springWorker.processing && !tweenWorker.processing else {
-      return
-    }
-
     for (k, i) in springAnimationBuffer {
       let meta = springAnimationBuffer.metaDataFor(key: k)!
       meta.setter(springAnimationBuffer.content![i].current)
@@ -248,18 +243,19 @@ open class GPUSpringAnimator: NSObject {
     
     for (k, i) in tweenAnimationBuffer {
       let meta = tweenAnimationBuffer.metaDataFor(key: k)!
-      meta.setter(meta.getter() + tweenAnimationBuffer.content![i].current - tweenAnimationBuffer.content![i].previous)
+      let newValue = meta.getter() + tweenAnimationBuffer.content![i].current - tweenAnimationBuffer.content![i].previous
+      meta.setter(newValue)
       if (tweenAnimationBuffer.content![i].running == 0) {
         tweenAnimationBuffer.remove(key: k)
         meta.completion?(true)
       }
     }
-
+    
+    processing = false
     for fn in queuedCommands{
       fn()
     }
     queuedCommands = []
-    processing = false
   }
   
   private func update(duration:Float) {
@@ -270,20 +266,19 @@ open class GPUSpringAnimator: NSObject {
       displayLinkPaused = true
     } else {
       processing = true
-//      for (k, i) in animationBuffer {
-//        animationBuffer.content![i].frame = animationBuffer.metaDataFor(key: k)!.getter()
+//      for (k, i) in springAnimationBuffer {
+//        springAnimationBuffer.content![i].current = springAnimationBuffer.metaDataFor(key: k)!.getter()
 //      }
 
       paramBuffer.content![0] = dt
       dt = 0
-      if (springAnimationBuffer.count != 0) { springWorker.process(size: springAnimationBuffer.capacity) }
-      if (tweenAnimationBuffer.count != 0) { tweenWorker.process(size: tweenAnimationBuffer.capacity) }
+      if (springAnimationBuffer.count != 0 || tweenAnimationBuffer.count != 0) { worker.process() }
     }
   }
   
   public func remove<T:Hashable>(_ item:T, key:String? = nil){
-    let removeFn:()->Void
-    removeFn = {
+    let removeFn = {
+      print("Remove \(key)")
       if let ids = self.propertyManager.remove(hash: item.hashValue, key: key){
         for id in ids{
           self.springAnimationBuffer.metaDataFor(key: id)?.completion?(false)
@@ -310,14 +305,13 @@ open class GPUSpringAnimator: NSObject {
                     threshold:Float = 0.01,
                     completion:((Bool) -> Void)? = nil) {
     let insertFn = {
+      print("Spring \(key) \(target)")
       let hash = item.hashValue
       let metaData = GPUAnimationMetaData(getter:getter, setter:setter, completion:completion)
       var state = GPUSpringAnimationState(current: getter(), target: target, stiffness: stiffness, damping: damping, threshold: threshold)
       
-      if let springId = self.propertyManager.springId(hash: hash, key: key){
-        let index = self.springAnimationBuffer.indexOf(key: springId)!
+      if let springId = self.propertyManager.springId(hash: hash, key: key), let index = self.springAnimationBuffer.indexOf(key: springId){
         state.velocity = self.springAnimationBuffer.content![index].velocity
-        self.springAnimationBuffer.metaDataFor(key: springId)?.completion?(false)
       }
       
       // clear all existing animation. since spring doesn't addup with tween animations
@@ -346,6 +340,7 @@ open class GPUSpringAnimator: NSObject {
                       ease:UnitBezier = .easeInOutSine,
                       completion:((Bool) -> Void)? = nil) {
     let insertFn = {
+      print("Tween \(key) \(target)")
       let hash = item.hashValue
       let metaData = GPUAnimationMetaData(getter:getter, setter:setter, completion:completion)
       
@@ -393,7 +388,7 @@ open class GPUSpringAnimator: NSObject {
           self.propertyManager.animationDone(hash:hash, key:key, id:id)
         }
       }
-      return v
+      return v * (1 / paramBuffer.content![0])
     }
     return float4()
   }

@@ -175,25 +175,41 @@ public class ViewAnimationState{
     #endif
   }
   
-  public var stiffness:Float = 200
-  public var damping:Float = 10
-  public var threshold:Float = 0.01
+  public enum AnimationType{
+    case Spring(stiffness:Float?, damping:Float?, threshold:Float?)
+    case Tween(duration:Float, ease:UnitBezier?);
+  }
+  public var type:AnimationType = .Spring(stiffness: 200,damping: 10,threshold: 0.001)
   
   public func custom(key:String,
-              getter:@escaping () -> float4,
-              setter:@escaping (float4) -> Void,
-              target:float4){
-    animations[key] = { [key, view, threshold, stiffness, damping] (completion) in
-      GPUSpringAnimator.sharedInstance.animate(view,
-                                               key: key,
-                                               getter: getter,
-                                               setter: setter,
-                                               target: target,
-                                               stiffness: stiffness,
-                                               damping: damping,
-                                               threshold: threshold,
-                                               completion: completion)
+                    getter:@escaping () -> float4,
+                    setter:@escaping (float4) -> Void,
+                    target:float4){
+    switch type {
+    case .Spring(stiffness: let stiffness, damping: let damping, threshold: let threshold):
+      animations[key] = { [key, view, threshold, stiffness, damping] (completion) in
+        GPUSpringAnimator.sharedInstance.animate(view,
+                                                 key: key,
+                                                 getter: getter,
+                                                 setter: setter,
+                                                 target: target,
+                                                 stiffness: stiffness ?? 200,
+                                                 damping: damping ?? 10,
+                                                 threshold: threshold ?? 0.001,
+                                                 completion: completion)
+      }
+    case .Tween(duration: let duration, ease: let ease):
+      animations[key] = { [key, view, duration, ease] (completion) in
+        GPUSpringAnimator.sharedInstance.animate(view,
+                                                 key: key,
+                                                 getter: getter,
+                                                 setter: setter,
+                                                 target: target,
+                                                 duration: duration,
+                                                 ease: ease ?? .easeInOutSine)
+      }
     }
+    
   }
   
   public lazy var frame:Animatable<CGRect> = Animatable<CGRect>(viewState:self,

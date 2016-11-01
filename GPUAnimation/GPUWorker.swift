@@ -38,10 +38,10 @@ private class Shared {
 
 public protocol GPUBufferType {
   var buffer: MTLBuffer? { get }
+  var capacity: Int { get }
 }
 
 open class GPUBuffer<Key:Hashable, Value, MetaData>:Sequence, GPUBufferType {
-
   public func makeIterator() -> DictionaryIterator<Key, Int> {
     return managed.makeIterator()
   }
@@ -132,21 +132,17 @@ open class GPUBuffer<Key:Hashable, Value, MetaData>:Sequence, GPUBufferType {
   }
 }
 
-open class GPUWorker {
-  var computeFn: MTLFunction?
-  var computePS: MTLComputePipelineState?
+open class GPUJob{
+  var computeFn: MTLFunction!
+  var computePS: MTLComputePipelineState!
   var buffers:[GPUBufferType] = []
-  var threadExecutionWidth:Int = 32
-  public var completionCallback:(()->Void)?
-  public var fallbackFunction:((GPUWorker)->Void)?
-  var processing = false
+  public var fallbackFunction:((GPUJob)->Void)?
   
-  public init(functionName:String, fallback:((GPUWorker)->Void)? = nil) {
+  public init(functionName:String, fallback:((GPUJob)->Void)? = nil) {
     self.fallbackFunction = fallback
     if Shared.metalAvaliable {
       computeFn = Shared.library.makeFunction(name: functionName)
-      computePS = try? Shared.device.makeComputePipelineState(function: computeFn!)
-      threadExecutionWidth = computePS!.threadExecutionWidth
+      computePS = try! Shared.device.makeComputePipelineState(function: computeFn!)
     } else if _isDebugAssertConfiguration() {
       print("GPUAnimation: Metal Not Avaliable, using fallback function for \(functionName)")
     }
@@ -155,23 +151,41 @@ open class GPUWorker {
   public func addBuffer<K: Hashable,V,M>(buffer:GPUBuffer<K,V,M>){
     buffers.append(buffer)
   }
+}
+open class GPUWorker {
+  var jobs = [GPUJob]()
+  var threadExecutionWidth:Int = 32
+  public var completionCallback:(()->Void)?
+  var processing = false
   
-  public func process(size:Int){
+  public init() {}
+  
+  
+  public func process(){
     processing = true
-    if let computePS = computePS{
+    
+    if Shared.metalAvaliable{
       let commandBuffer = Shared.queue.makeCommandBuffer()
-      let computeCE = commandBuffer.makeComputeCommandEncoder()
-      computeCE.setComputePipelineState(computePS)
-      for (i, buffer) in buffers.enumerated() {
-        computeCE.setBuffer(buffer.buffer, offset: 0, at: i)
+      for job in jobs{
+        let size = job.buffers.first!.capacity
+        if size == 0 {
+          continue
+        }
+        let computeCE = commandBuffer.makeComputeCommandEncoder()
+        computeCE.setComputePipelineState(job.computePS)
+        for (i, buffer) in job.buffers.enumerated() {
+          computeCE.setBuffer(buffer.buffer, offset: 0, at: i)
+        }
+        
+        computeCE.dispatchThreadgroups(MTLSize(width: (size+threadExecutionWidth-1)/threadExecutionWidth, height: 1, depth: 1), threadsPerThreadgroup: MTLSize(width: threadExecutionWidth, height: 1, depth: 1))
+        computeCE.endEncoding()
       }
-      
-      computeCE.dispatchThreadgroups(MTLSize(width: (size+threadExecutionWidth-1)/threadExecutionWidth, height: 1, depth: 1), threadsPerThreadgroup: MTLSize(width: threadExecutionWidth, height: 1, depth: 1))
-      computeCE.endEncoding()
       commandBuffer.addCompletedHandler(self.doneProcessing)
       commandBuffer.commit()
     } else {
-      fallbackFunction?(self)
+      for job in jobs{
+        job.fallbackFunction?(job)
+      }
       processing = false
       completionCallback?()
     }
