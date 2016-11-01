@@ -42,7 +42,7 @@ class ExamplesViewController: UIViewController {
     let rotateX = -(velocity.y/1000).clamp(-maxRotate,maxRotate)
     let rotateY = (velocity.x/1000).clamp(-maxRotate,maxRotate)
     
-    self.square.animate{
+    self.square.animate {
       $0.transform.resetToIdentity()
       $0.transform.rotate(x: rotateX, y: rotateY, z: 0)
       $0.alpha.target = Float(1.0 - max(abs(rotateY),abs(rotateX)) / π * 2)
@@ -52,6 +52,7 @@ class ExamplesViewController: UIViewController {
   
   func tap(_ gr:UITapGestureRecognizer){
     let loc = gr.location(in: view)
+//    GPUSpringAnimator.sharedInstance.animate(self, key: "center", getter: { return self.square.center.toVec4 }, setter: { self.square.center = CGPoint.fromVec4($0) }, target: loc.toVec4, duration: 0.4)
     square.animate{
       $0.center.target = loc
       $0.center.onVelocityChange = self.onSquareVelocityChanged

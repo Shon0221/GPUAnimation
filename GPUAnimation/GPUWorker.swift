@@ -138,9 +138,10 @@ open class GPUWorker {
   var buffers:[GPUBufferType] = []
   var threadExecutionWidth:Int = 32
   public var completionCallback:(()->Void)?
-  public var fallbackFunction:(()->Void)?
+  public var fallbackFunction:((GPUWorker)->Void)?
+  var processing = false
   
-  public init(functionName:String, fallback:(()->Void)? = nil) {
+  public init(functionName:String, fallback:((GPUWorker)->Void)? = nil) {
     self.fallbackFunction = fallback
     if Shared.metalAvaliable {
       computeFn = Shared.library.makeFunction(name: functionName)
@@ -156,6 +157,7 @@ open class GPUWorker {
   }
   
   public func process(size:Int){
+    processing = true
     if let computePS = computePS{
       let commandBuffer = Shared.queue.makeCommandBuffer()
       let computeCE = commandBuffer.makeComputeCommandEncoder()
@@ -169,12 +171,14 @@ open class GPUWorker {
       commandBuffer.addCompletedHandler(self.doneProcessing)
       commandBuffer.commit()
     } else {
-      fallbackFunction?()
+      fallbackFunction?(self)
+      processing = false
       completionCallback?()
     }
   }
   
   private func doneProcessing(buffer:MTLCommandBuffer){
+    processing = false
     DispatchQueue.main.async {
       self.completionCallback?()
     }
