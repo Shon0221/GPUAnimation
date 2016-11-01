@@ -278,7 +278,7 @@ open class GPUSpringAnimator: NSObject {
   
   public func remove<T:Hashable>(_ item:T, key:String? = nil){
     let removeFn = {
-      print("Remove \(key)")
+//      print("Remove \(key)")
       if let ids = self.propertyManager.remove(hash: item.hashValue, key: key){
         for id in ids{
           self.springAnimationBuffer.metaDataFor(key: id)?.completion?(false)
@@ -305,7 +305,7 @@ open class GPUSpringAnimator: NSObject {
                     threshold:Float = 0.01,
                     completion:((Bool) -> Void)? = nil) {
     let insertFn = {
-      print("Spring \(key) \(target)")
+//      print("Spring \(key) \(target)")
       let hash = item.hashValue
       let metaData = GPUAnimationMetaData(getter:getter, setter:setter, completion:completion)
       var state = GPUSpringAnimationState(current: getter(), target: target, stiffness: stiffness, damping: damping, threshold: threshold)
@@ -340,7 +340,7 @@ open class GPUSpringAnimator: NSObject {
                       ease:UnitBezier = .easeInOutSine,
                       completion:((Bool) -> Void)? = nil) {
     let insertFn = {
-      print("Tween \(key) \(target)")
+//      print("Tween \(key) \(target)")
       let hash = item.hashValue
       let metaData = GPUAnimationMetaData(getter:getter, setter:setter, completion:completion)
       
@@ -350,10 +350,16 @@ open class GPUSpringAnimator: NSObject {
       } else if let ids = self.propertyManager.list(hash: hash, key: key){
         // loop through existing animations and clear information for completed ones
         // this is needed so that we wont grab the incorrect target
+        var count = ids.count
         for id in ids{
           if self.tweenAnimationBuffer.indexOf(key: id) == nil{
             self.propertyManager.animationDone(hash:hash, key:key, id:id)
+            count -= 1;
           }
+        }
+        if count > 5{
+          // Composing more than 5 animations is not supported, will stop all previous animations
+          self.remove(hash, key: key)
         }
       }
       

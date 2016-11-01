@@ -61,8 +61,12 @@ open class GPUBuffer<Key:Hashable, Value, MetaData>:Sequence, GPUBufferType {
     return managed.count
   }
   
-  public init(_ size:Int = 2){
-    resize(size:size)
+  public init(_ size:Int = 0){
+    if (size == 0) {
+      clear()
+    } else {
+      resize(size:size)
+    }
   }
   
   public func indexOf(key:Key) -> Int? {
@@ -112,7 +116,8 @@ open class GPUBuffer<Key:Hashable, Value, MetaData>:Sequence, GPUBufferType {
     if Shared.metalAvaliable {
       let newBuffer: MTLBuffer = Shared.device.makeBuffer(length: MemoryLayout<Value>.size * size, options: [.storageModeShared])
       if buffer != nil {
-        memcpy(newBuffer.contents(), buffer!.contents(), Swift.min(size * MemoryLayout<Value>.size, buffer!.length))
+        // copy one extra block just to be safe.
+        memcpy(newBuffer.contents(), buffer!.contents(), Swift.min(size * MemoryLayout<Value>.size, buffer!.length + MemoryLayout<Value>.size))
       }
       buffer = newBuffer
       content = UnsafeMutableBufferPointer(start: buffer!.contents().assumingMemoryBound(to: Value.self), count: buffer!.length / MemoryLayout<Value>.size)
@@ -157,6 +162,7 @@ open class GPUWorker {
   var threadExecutionWidth:Int = 32
   public var completionCallback:(()->Void)?
   var processing = false
+  var commandBuffer:MTLCommandBuffer!
   
   public init() {}
   
@@ -165,7 +171,7 @@ open class GPUWorker {
     processing = true
     
     if Shared.metalAvaliable{
-      let commandBuffer = Shared.queue.makeCommandBuffer()
+      commandBuffer = Shared.queue.makeCommandBuffer()
       for job in jobs{
         let size = job.buffers.first!.capacity
         if size == 0 {
@@ -177,7 +183,7 @@ open class GPUWorker {
           computeCE.setBuffer(buffer.buffer, offset: 0, at: i)
         }
         
-        computeCE.dispatchThreadgroups(MTLSize(width: (size+threadExecutionWidth-1)/threadExecutionWidth, height: 1, depth: 1), threadsPerThreadgroup: MTLSize(width: threadExecutionWidth, height: 1, depth: 1))
+        computeCE.dispatchThreadgroups(MTLSize(width: size/2, height: 1, depth: 1), threadsPerThreadgroup: MTLSize(width: 2, height: 1, depth: 1))
         computeCE.endEncoding()
       }
       commandBuffer.addCompletedHandler(self.doneProcessing)
@@ -193,8 +199,12 @@ open class GPUWorker {
   
   private func doneProcessing(buffer:MTLCommandBuffer){
     processing = false
-    DispatchQueue.main.async {
-      self.completionCallback?()
+    if let e = buffer.error{
+      print(e)
+    } else {
+      DispatchQueue.main.async {
+        self.completionCallback?()
+      }
     }
   }
 }

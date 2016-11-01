@@ -46,8 +46,8 @@ class ExamplesViewController: UIViewController {
     let rotateY = (velocity.x/1000).clamp(-maxRotate,maxRotate)
     
     self.square.animate {
-//      $0.transform.resetToIdentity()
-//      $0.transform.rotate(x: rotateX, y: rotateY, z: 0)
+      $0.transform.resetToIdentity()
+      $0.transform.rotate(x: rotateX, y: rotateY, z: 0)
       $0.alpha.target = Float(1.0 - max(abs(rotateY),abs(rotateX)) / π * 2)
       $0.shadowOffset.target = CGSize(width: rotateY*20, height:-rotateX*20)
     }

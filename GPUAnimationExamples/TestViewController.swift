@@ -71,6 +71,7 @@ class TestViewController:UIViewController{
       print("Stored animation finished")
       self.storedAnimation.execute()
   }
+
   func test4(){
     storedAnimation.execute()
   }

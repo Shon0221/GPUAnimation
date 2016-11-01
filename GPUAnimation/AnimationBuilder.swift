@@ -180,6 +180,8 @@ public class ViewAnimationState{
     case Tween(duration:Float, ease:UnitBezier?);
   }
   public var type:AnimationType = .Spring(stiffness: 200,damping: 10,threshold: 0.001)
+  // public var type:AnimationType = .Tween(duration: 0.4, ease: .easeInOutSine)
+  
   
   public func custom(key:String,
                     getter:@escaping () -> float4,
@@ -206,7 +208,8 @@ public class ViewAnimationState{
                                                  setter: setter,
                                                  target: target,
                                                  duration: duration,
-                                                 ease: ease ?? .easeInOutSine)
+                                                 ease: ease ?? .easeInOutSine,
+                                                 completion: completion)
       }
     }
     
