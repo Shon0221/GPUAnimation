@@ -23,6 +23,8 @@
 #include <metal_stdlib>
 using namespace metal;
 
+#define M_PI   3.14159265358979323846264338327950288
+
 struct SpringAnimationState {
   float4 current;
   float4 target;
@@ -57,81 +59,75 @@ kernel void springAnimate(
 
 
 
-struct UnitBezier {
-  float sampleCurveX(float t)
-  {
-    // `ax t^3 + bx t^2 + cx t' expanded using Horner's rule.
-    return ((ax * t + bx) * t + cx) * t;
-  }
+enum TweenType:int { linear = 0,
+                     quadratic, 
+                     cubic, 
+                     quartic, 
+                     quintic, 
+                     sine, 
+                     circular, 
+                     exponential, 
+                     elastic, 
+                     back, 
+                     bounce };
   
-  float sampleCurveY(float t)
-  {
-    return ((ay * t + by) * t + cy) * t;
-  }
-  
-  float sampleCurveDerivativeX(float t)
-  {
-    return (3.0 * ax * t + 2.0 * bx) * t + cx;
-  }
-  
-  // Given an x value, find a parametric value it came from.
-  float solveCurveX(float x, float epsilon)
-  {
-    float t0;
-    float t1;
-    float t2;
-    float x2;
-    float d2;
-    int i;
-    
-    // First try a few iterations of Newton's method -- normally very fast.
-    for (t2 = x, i = 0; i < 8; i++) {
-      x2 = sampleCurveX(t2) - x;
-      if (fabs (x2) < epsilon)
-        return t2;
-      d2 = sampleCurveDerivativeX(t2);
-      if (fabs(d2) < 1e-6)
-        break;
-      t2 = t2 - x2 / d2;
-    }
-    
-    // Fall back to the bisection method for reliability.
-    t0 = 0.0;
-    t1 = 1.0;
-    t2 = x;
-    
-    if (t2 < t0)
-      return t0;
-    if (t2 > t1)
-      return t1;
-    
-    while (t0 < t1) {
-      x2 = sampleCurveX(t2);
-      if (fabs(x2 - x) < epsilon)
-        return t2;
-      if (x > x2)
-        t0 = t2;
-      else
-        t1 = t2;
-      t2 = (t1 - t0) * .5 + t0;
-    }
-    
-    // Failure.
-    return t2;
-  }
-  
-  float solve(float x, float epsilon)
-  {
-    return sampleCurveY(solveCurveX(x, epsilon));
-  }
+enum EaseType:int { in = 0, out, inOut };
 
-  float ax;
-  float bx;
-  float cx;
-  
-  float ay;
-  float by;
-  float cy;
+struct Curve {
+  TweenType type;
+  EaseType ease;
+  float easeIn(float t){
+    switch (type) {
+      case linear:
+        return t;
+      case quadratic:
+        return t*t;
+      case cubic:
+        return t*t*t;
+      case quartic:
+        return t*t*t*t;
+      case quintic:
+        return t*t*t*t*t;
+      case sine:
+        return sin((t - 1) * M_PI / 2) + 1;
+      case circular:
+        return 1 - sqrt(1 - (t * t));
+      case exponential:
+        return (t == 0.0) ? t : pow(2, 10 * (t - 1));
+      case elastic:
+        return sin(13 * M_PI / 2 * t) * pow(2, 10 * (t - 1));
+      case back:
+        return t*t*t - t*sin(t * M_PI);
+      case bounce:
+        t = 1 - t;
+        if (t < 1/2.75) {
+          return 1 - (7.5625*t*t);
+        } else if (t < (2/2.75)) {
+          t -= 1.5/2.75;
+          return 1 - (7.5625*t*t + .75);
+        } else if (t < (2.5/2.75)) {
+          t -= 2.25/2.75;
+          return 1 - (7.5625*t*t + .9375);
+        } else {
+          t -= 2.625/2.75;
+          return 1 - (7.5625*t*t + .984375);
+        }
+    }
+  }
+  float easeOut(float t){
+    return 1 - easeIn(1 - t);
+  }
+  float solve(float t){
+    switch (ease) {
+      case in:
+        return easeIn(t);
+      case out:
+        return easeOut(t);
+      case inOut:
+        float side = clamp(sign(t - 0.5), 0.0, 1.0);
+        return (mix(easeIn(t*2), easeOut(t*2-1), side) + side) * 0.5;
+    }
+  }
 };
 
 struct TweenAnimationState {
@@ -140,7 +136,7 @@ struct TweenAnimationState {
   float4 previous;
   float currentTime;
   float duration;
-  UnitBezier bezier;
+  Curve curve;
   int running;
 };
 
@@ -156,6 +152,6 @@ kernel void tweenAnimate(
   a->running = a->running && a->currentTime < a->duration;
 
   a->previous = a->current;
-  float y = ((UnitBezier)a->bezier).solve(a->currentTime / a->duration, 0.001 / a->duration);
+  float y = ((Curve)a->curve).solve(a->currentTime / a->duration);
   a->current = a->running ? y * a->target : a->target;
 }

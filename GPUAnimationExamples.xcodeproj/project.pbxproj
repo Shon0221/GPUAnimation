@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A34306531DCA50BC00DB34F4 /* Curve.swift in Sources */ = {isa = PBXBuildFile; fileRef = B181EC871DC7F17D003532FC /* Curve.swift */; };
 		A3DF47471DA2FFCC0058B5F6 /* VectorConvertable.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DF47461DA2FFCC0058B5F6 /* VectorConvertable.swift */; };
 		A3DF474B1DA30C610058B5F6 /* LZPanGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DF474A1DA30C610058B5F6 /* LZPanGestureRecognizer.swift */; };
 		A3DF476F1DA360E00058B5F6 /* TestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DF476E1DA360E00058B5F6 /* TestViewController.swift */; };
@@ -33,7 +34,7 @@
 		B11022101D9CED3200EDF9D0 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B110220E1D9CED3200EDF9D0 /* LaunchScreen.storyboard */; };
 		B11022211D9CEDC400EDF9D0 /* Random.swift in Sources */ = {isa = PBXBuildFile; fileRef = B11022181D9CEDC400EDF9D0 /* Random.swift */; };
 		B11022241D9CEDC400EDF9D0 /* SortedRangeSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B110221B1D9CEDC400EDF9D0 /* SortedRangeSet.swift */; };
-		B181EC881DC7F17D003532FC /* Bezier.swift in Sources */ = {isa = PBXBuildFile; fileRef = B181EC871DC7F17D003532FC /* Bezier.swift */; };
+		B181EC881DC7F17D003532FC /* Curve.swift in Sources */ = {isa = PBXBuildFile; fileRef = B181EC871DC7F17D003532FC /* Curve.swift */; };
 		B1AF47471D9DF9E50053A995 /* ExamplesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1AF47461D9DF9E50053A995 /* ExamplesViewController.swift */; };
 /* End PBXBuildFile section */
 
@@ -62,7 +63,7 @@
 		B11022111D9CED3200EDF9D0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B11022181D9CEDC400EDF9D0 /* Random.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Random.swift; sourceTree = "<group>"; };
 		B110221B1D9CEDC400EDF9D0 /* SortedRangeSet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SortedRangeSet.swift; sourceTree = "<group>"; };
-		B181EC871DC7F17D003532FC /* Bezier.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Bezier.swift; path = GPUAnimation/Bezier.swift; sourceTree = SOURCE_ROOT; };
+		B181EC871DC7F17D003532FC /* Curve.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Curve.swift; path = GPUAnimation/Curve.swift; sourceTree = SOURCE_ROOT; };
 		B1AF47461D9DF9E50053A995 /* ExamplesViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ExamplesViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -145,7 +146,7 @@
 			children = (
 				A3E778641D9F604C0096C5C2 /* GPUAnimation.metal */,
 				A3E778651D9F604C0096C5C2 /* GPUAnimator.swift */,
-				B181EC871DC7F17D003532FC /* Bezier.swift */,
+				B181EC871DC7F17D003532FC /* Curve.swift */,
 				A3E778661D9F604C0096C5C2 /* GPUWorker.swift */,
 				A3E778681D9F604C0096C5C2 /* CG+GPUAnimation.swift */,
 				A3DF47461DA2FFCC0058B5F6 /* VectorConvertable.swift */,
@@ -267,6 +268,7 @@
 				A3DF47791DA426920058B5F6 /* ViewController.swift in Sources */,
 				A3DF47771DA426920058B5F6 /* AppDelegate.swift in Sources */,
 				A3DF47831DA4280A0058B5F6 /* GPUAnimation.metal in Sources */,
+				A34306531DCA50BC00DB34F4 /* Curve.swift in Sources */,
 				A3DF47841DA4280A0058B5F6 /* GPUAnimator.swift in Sources */,
 				A3DF47851DA4280A0058B5F6 /* GPUWorker.swift in Sources */,
 				A3DF478E1DA439B70058B5F6 /* NSView+GPUAnimation.swift in Sources */,
@@ -282,7 +284,7 @@
 				A3E7786C1D9F604C0096C5C2 /* GPUWorker.swift in Sources */,
 				A3DF47471DA2FFCC0058B5F6 /* VectorConvertable.swift in Sources */,
 				B11022061D9CED3200EDF9D0 /* AppDelegate.swift in Sources */,
-				B181EC881DC7F17D003532FC /* Bezier.swift in Sources */,
+				B181EC881DC7F17D003532FC /* Curve.swift in Sources */,
 				A3E7786B1D9F604C0096C5C2 /* GPUAnimator.swift in Sources */,
 				A3E7787C1DA0A5260096C5C2 /* GPUAnimation.metal in Sources */,
 				B1AF47471D9DF9E50053A995 /* ExamplesViewController.swift in Sources */,

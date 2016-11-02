@@ -177,7 +177,7 @@ public class ViewAnimationState{
   
   public enum AnimationType{
     case Spring(stiffness:Float?, damping:Float?, threshold:Float?)
-    case Tween(duration:Float, ease:UnitBezier?);
+    case Tween(duration:Float, curve:Curve?);
   }
   public var type:AnimationType = .Spring(stiffness: 200,damping: 10,threshold: 0.001)
   // public var type:AnimationType = .Tween(duration: 0.4, ease: .easeInOutSine)
@@ -200,15 +200,15 @@ public class ViewAnimationState{
                                                  threshold: threshold ?? 0.001,
                                                  completion: completion)
       }
-    case .Tween(duration: let duration, ease: let ease):
-      animations[key] = { [key, view, duration, ease] (completion) in
+    case .Tween(duration: let duration, curve: let curve):
+      animations[key] = { [key, view, duration, curve] (completion) in
         GPUSpringAnimator.sharedInstance.animate(view,
                                                  key: key,
                                                  getter: getter,
                                                  setter: setter,
                                                  target: target,
                                                  duration: duration,
-                                                 ease: ease ?? .easeInOutSine,
+                                                 curve: curve ?? .ease,
                                                  completion: completion)
       }
     }
@@ -368,7 +368,7 @@ public class ViewAnimationBuilder{
           currentRunningAnimation[k] = v
         }
       }
-      if currentRunningAnimation.count > 1{
+      if currentRunningAnimation.count > 1 {
         let dispatchGroup = DispatchGroup()
         var allFinished = true
         for fn in currentRunningAnimation.values{

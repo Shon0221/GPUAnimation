@@ -51,13 +51,13 @@ fileprivate struct GPUTweenAnimationState{
   var previous: float4 = float4()
   var currentTime: Float = 0
   var duration: Float
-  var bezier: UnitBezier
+  var curve: Curve
   var running: Int32 = 1
   
-  init(target t: float4, duration d:Float, bezier b:UnitBezier) {
+  init(target t: float4, duration d:Float, curve c:Curve) {
     target = t
     duration = d
-    bezier = b
+    curve = c
   }
 }
 
@@ -223,7 +223,7 @@ open class GPUSpringAnimator: NSObject {
       a.pointee.running = a.pointee.currentTime > a.pointee.duration ? 0 : 1
       a.pointee.previous = a.pointee.current
       if (a.pointee.running == 1) {
-        let y = a.pointee.bezier.solve(x: a.pointee.currentTime / a.pointee.duration, eps: 0.001 / a.pointee.duration)
+        let y = a.pointee.curve.solve(a.pointee.currentTime / a.pointee.duration)
         a.pointee.current = y * a.pointee.target
       } else {
         a.pointee.current = a.pointee.target
@@ -244,10 +244,13 @@ open class GPUSpringAnimator: NSObject {
     for (k, i) in tweenAnimationBuffer {
       let meta = tweenAnimationBuffer.metaDataFor(key: k)!
       let newValue = meta.getter() + tweenAnimationBuffer.content![i].current - tweenAnimationBuffer.content![i].previous
-      meta.setter(newValue)
+      
       if (tweenAnimationBuffer.content![i].running == 0) {
         tweenAnimationBuffer.remove(key: k)
+        meta.setter(newValue) // call setter after removing the animation. so that the velocity is zero
         meta.completion?(true)
+      } else {
+        meta.setter(newValue)
       }
     }
     
@@ -337,7 +340,7 @@ open class GPUSpringAnimator: NSObject {
                       setter:@escaping (float4) -> Void,
                       target:float4,
                       duration:Float,
-                      ease:UnitBezier = .easeInOutSine,
+                      curve:Curve = .ease,
                       completion:((Bool) -> Void)? = nil) {
     let insertFn = {
 //      print("Tween \(key) \(target)")
@@ -366,7 +369,7 @@ open class GPUSpringAnimator: NSObject {
       // For additive tween animation, we set the target to be the difference between the real target and the current target
       let initialValue = self.propertyManager.currentTargetFor(hash: hash, key: key) ?? getter()
       
-      let state = GPUTweenAnimationState(target: target - initialValue, duration: duration, bezier: ease)
+      let state = GPUTweenAnimationState(target: target - initialValue, duration: duration, curve: curve)
       let animationId = self.propertyManager.add(hash: hash, key: key, target: target)
       self.tweenAnimationBuffer.add(key: animationId, value: state, meta:metaData)
       if self.displayLinkPaused {

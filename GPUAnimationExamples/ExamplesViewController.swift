@@ -25,10 +25,6 @@ class ExamplesViewController: UIViewController {
     dTapGR.numberOfTapsRequired = 2
     view.addGestureRecognizer(tapGR)
     view.addGestureRecognizer(dTapGR)
-    
-    square.layer.shadowColor = square.backgroundColor?.cgColor
-    square.layer.shadowRadius = 30
-    square.layer.shadowOpacity = 0
   }
   
   var isBig = false
@@ -49,14 +45,13 @@ class ExamplesViewController: UIViewController {
       $0.transform.resetToIdentity()
       $0.transform.rotate(x: rotateX, y: rotateY, z: 0)
       $0.alpha.target = Float(1.0 - max(abs(rotateY),abs(rotateX)) / π * 2)
-      $0.shadowOffset.target = CGSize(width: rotateY*20, height:-rotateX*20)
     }
   }
   
   func tap(_ gr:UITapGestureRecognizer){
     let loc = gr.location(in: view)
     square.animate{
-      $0.type = .Tween(duration: 0.4, ease: nil)
+      $0.type = .Tween(duration: 2.0, curve: .elastic)
       $0.center.target = loc
       $0.center.onVelocityChange = self.onSquareVelocityChanged
     }

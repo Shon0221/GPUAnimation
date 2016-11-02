@@ -163,10 +163,9 @@ open class GPUWorker {
   public var completionCallback:(()->Void)?
   var processing = false
   var commandBuffer:MTLCommandBuffer!
-  
+
   public init() {}
-  
-  
+
   public func process(){
     processing = true
     
@@ -177,13 +176,14 @@ open class GPUWorker {
         if size == 0 {
           continue
         }
+        let width = min(size, job.computePS.threadExecutionWidth)
         let computeCE = commandBuffer.makeComputeCommandEncoder()
         computeCE.setComputePipelineState(job.computePS)
         for (i, buffer) in job.buffers.enumerated() {
           computeCE.setBuffer(buffer.buffer, offset: 0, at: i)
         }
         
-        computeCE.dispatchThreadgroups(MTLSize(width: size/2, height: 1, depth: 1), threadsPerThreadgroup: MTLSize(width: 2, height: 1, depth: 1))
+        computeCE.dispatchThreadgroups(MTLSize(width: size/width, height: 1, depth: 1), threadsPerThreadgroup: MTLSize(width: width, height: 1, depth: 1))
         computeCE.endEncoding()
       }
       commandBuffer.addCompletedHandler(self.doneProcessing)
