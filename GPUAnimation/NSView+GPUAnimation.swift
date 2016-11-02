@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#if os(macOS)
 import AppKit
 import MetalKit
 
@@ -54,3 +55,4 @@ extension NSView{
     return GPUSpringAnimator.sharedInstance.remove(self)
   }
 }
+#endif
