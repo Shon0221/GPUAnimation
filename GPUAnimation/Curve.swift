@@ -65,7 +65,7 @@ public struct Curve {
     }
   }
   
-  init(type:TweenType, ease:EaseType){
+  public init(type:TweenType, ease:EaseType){
     rawType = type.rawValue
     rawEase = ease.rawValue
   }
