@@ -115,7 +115,7 @@ public struct Animatable<T:VectorConvertable>{
     if onChange != nil && onVelocityChange != nil {
       setter = { [view = viewState.view, key, originalSetter, onChange, onVelocityChange] value in
         let v = T.fromVec4(value)
-        let velocity = T.fromVec4(GPUSpringAnimator.sharedInstance.velocityFor(view, key:key))
+        let velocity = T.fromVec4(GPUAnimator.sharedInstance.velocityFor(view, key:key))
         originalSetter(v)
         onChange!(v)
         onVelocityChange!(velocity)
@@ -129,7 +129,7 @@ public struct Animatable<T:VectorConvertable>{
     } else if let onVelocityChange = onVelocityChange {
       setter = { [view = viewState.view, key, originalSetter, onVelocityChange] value in
         let v = T.fromVec4(value)
-        let velocity = T.fromVec4(GPUSpringAnimator.sharedInstance.velocityFor(view, key:key))
+        let velocity = T.fromVec4(GPUAnimator.sharedInstance.velocityFor(view, key:key))
         originalSetter(v)
         onVelocityChange(velocity)
       }
@@ -190,7 +190,7 @@ public class ViewAnimationState{
     switch type {
     case .Spring(stiffness: let stiffness, damping: let damping, threshold: let threshold):
       animations[key] = { [key, view, threshold, stiffness, damping] (completion) in
-        GPUSpringAnimator.sharedInstance.animate(view,
+        GPUAnimator.sharedInstance.animate(view,
                                                  key: key,
                                                  getter: getter,
                                                  setter: setter,
@@ -202,7 +202,7 @@ public class ViewAnimationState{
       }
     case .Tween(duration: let duration, curve: let curve):
       animations[key] = { [key, view, duration, curve] (completion) in
-        GPUSpringAnimator.sharedInstance.animate(view,
+        GPUAnimator.sharedInstance.animate(view,
                                                  key: key,
                                                  getter: getter,
                                                  setter: setter,
@@ -424,7 +424,7 @@ public class ViewAnimationBuilder{
     running = false
     timer?.invalidate()
     for key in currentRunningAnimation.keys{
-      GPUSpringAnimator.sharedInstance.remove(view, key: key)
+      GPUAnimator.sharedInstance.remove(view, key: key)
     }
     return self
   }

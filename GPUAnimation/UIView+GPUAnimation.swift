@@ -46,7 +46,7 @@ extension UIView{
     return ViewAnimationBuilder(view: self).animate(block)
   }
   public func stopAllAnimations(){
-    return GPUSpringAnimator.sharedInstance.remove(self)
+    return GPUAnimator.sharedInstance.remove(self)
   }
 }
 #endif

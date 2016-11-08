@@ -75,9 +75,20 @@ fileprivate struct GPUAnimationMetaData{
   }
 }
 
-open class GPUSpringAnimator: NSObject {
-  open static let sharedInstance = GPUSpringAnimator()
+@objc public protocol GPUAnimatorDelegate {
+  @objc optional func animator(_ animator:GPUAnimator, finishedUpdateAfter dt:Float)
+  @objc optional func animatorDidStop(_ animator:GPUAnimator)
+  @objc optional func animatorWillStart(_ animator:GPUAnimator)
+}
+
+open class GPUAnimator: NSObject {
+  open static let sharedInstance = GPUAnimator()
+  public weak var delegate:GPUAnimatorDelegate?
   
+  public var running:Bool{
+    return !displayLinkPaused
+  }
+
   private var displayLinkPaused:Bool{
     get{
       return displayLink == nil
@@ -166,7 +177,7 @@ open class GPUSpringAnimator: NSObject {
   private var dt:Float = 0
   private var processing = false
   
-  private override init(){
+  public override init(){
     super.init()
     paramBuffer.content![0] = 0
     let springJob = GPUJob(functionName: "springAnimate", fallback:springFallback)
@@ -259,6 +270,7 @@ open class GPUSpringAnimator: NSObject {
       fn()
     }
     queuedCommands = []
+    delegate?.animator?(self, finishedUpdateAfter: dt+paramBuffer.content![0])
   }
   
   private func update(duration:Float) {
@@ -406,7 +418,7 @@ open class GPUSpringAnimator: NSObject {
     if !displayLinkPaused {
       return
     }
-    
+    delegate?.animatorWillStart?(self)
     #if os(macOS)
       CVDisplayLinkCreateWithActiveCGDisplays(&displayLink)
       CVDisplayLinkSetOutputCallback(displayLink!, { (_, _, outTime, _, _, userInfo) -> CVReturn in
@@ -440,6 +452,8 @@ open class GPUSpringAnimator: NSObject {
       displayLink!.remove(from: RunLoop.main, forMode: RunLoopMode(rawValue: RunLoopMode.commonModes.rawValue))
     #endif
     displayLink = nil
+    
+    delegate?.animatorDidStop?(self)
   }
 }
 
